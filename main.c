@@ -128,17 +128,24 @@ void main(void)
     loadTileData();
 
     // this also loads the characters/numbers for us
-    printf("Press Start to Play");
+    printf("\n");
+    printf("\n\nA        Hit");
+    printf("\n\nB        Stay");
+    printf("\n\nStart    Split");
+    printf("\n\nSelect   Double Down");
+
     //Use the user input to generate a seed #
-    waitpad(J_START);
+    waitpad(0xFF);
     uint16_t seed = LY_REG;
     seed |= (uint16_t)DIV_REG << 8;
     initrand(seed);
 
-    // clear the start message
-    for (i = 0; i < 20; i++) {
-        set_bkg_tiles(i, 0, 1, 1, &blankTile);
-
+    // clear the bg
+    uint8_t z;
+    for (z = 0; z < 18; z++) {
+        for (i = 0; i < 20; i++) {
+            set_bkg_tiles(i, z, 1, 1, &blankTile);
+        }
     }
     SHOW_SPRITES;
     SHOW_BKG;
