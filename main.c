@@ -12,6 +12,7 @@
 #include "card.c"
 
 /************************** Tile defs **************************/
+#define FONT_TEST_COUNT 10
 
 #define CARD_TILES_COUNT 75
 
