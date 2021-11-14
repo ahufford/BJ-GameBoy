@@ -5,57 +5,84 @@
 #include <gb/drawing.h>
 #include <string.h>
 
-#include "CardTiles.h"
+//#include "CardTiles.h"
+#include "assets/neoBjTiles.h"
+#include "assets/neoBjMap.h"
+
 #include "card.c"
 
 /************************** Tile defs **************************/
 
-#define SPRITE_TILES_COUNT 32
+#define CARD_TILES_COUNT 75
+
+#define FONT_NUMBERS_START 76
+#define FONT_NUMBERS_COUNT 10
+
+#define FONT_LETTERS_START 86
+#define FONT_LETTERS_COUNT 26
+
+#define FONT_EXCALMATION 112
+#define FONT_QUESTION 113
+#define FONT_SLASH 114
+#define FONT_MONEY 75
+
+#define PLAYER_HAND_X 2
+#define PLAYER_HAND_Y 12
+
+#define DEALER_HAND_X 2
+#define DEALER_HAND_Y 2
 
 #define PLAYER_HAND_VALUE_X 17
-#define PLAYER_HAND_VALUE_Y 16
+#define PLAYER_HAND_VALUE_Y 14
 
 #define DEALER_HAND_VALUE_X 17
 #define DEALER_HAND_VALUE_Y 2
 
-#define MONEY_X 15
-#define MONEY_Y 10
+#define MONEY_X 7
+#define MONEY_Y 16
+
+#define BET_X 1
+#define BET_Y 7
 
 #define RESULT_X 6
 #define RESULT_Y 8
 
-#define HAND_COUNT_X 4
+#define HAND_COUNT_X 2
 #define HAND_COUNT_Y 16
 
 UBYTE SPRITE_SIZE = 8;
 
 unsigned char numbersTile = 0x10;
-unsigned char lettersCapsTile = 0x21;
-unsigned char lettersLowerTile = 0x41;
-unsigned char punctuationTile = 0x01;
+unsigned char letterTile = 0x21;
 
 char startTile = 0x00;
-unsigned char blankTile = 0x00;
-unsigned char spadesTile = 0x80;
-unsigned char spadesTile2 = 0x81;
-unsigned char heartsTile = 0x82;
-unsigned char heartsTile2 = 0x83;
-unsigned char clubsTile = 0x84;
-unsigned char clubsTile2 = 0x85;
-unsigned char diamondsTile = 0x86;
-unsigned char diamondsTile2 = 0x87;
-unsigned char topRightTile = 0x88;
-unsigned char valueTiles = 0x89;
-//Card backTiles
-unsigned char b1Tiles = 0x98;
-unsigned char b2Tiles = 0x9C;
+unsigned char blankTile = 0x80;
 
-const UWORD bgPalette[] = {
+unsigned char valueTiles = 0x81;
+unsigned char suitTiles = 0x9D;
+unsigned char cardBlankTiles = 0x9B;
+unsigned char cardBacks = 0xA5;
 
-    CardTilesCGBPal0c0, 
-    CardTilesCGBPal0c1, 
-    CardTilesCGBPal0c2, 
-    CardTilesCGBPal0c3 
+unsigned char paletteFace1 = 0x00;
+unsigned char paletteBack1 = 0x02;
+
+
+const UWORD bgPalettes[] = {
+
+    neoBjCardsCGBPal0c0, 
+    neoBjCardsCGBPal0c1, 
+    neoBjCardsCGBPal0c2, 
+    neoBjCardsCGBPal0c3,
+
+    neoBjCardsCGBPal1c0,
+    neoBjCardsCGBPal1c1,
+    neoBjCardsCGBPal1c2,
+    neoBjCardsCGBPal1c3,
+
+    neoBjCardsCGBPal2c0,
+    neoBjCardsCGBPal2c1,
+    neoBjCardsCGBPal2c2,
+    neoBjCardsCGBPal2c3
 
 };
 
@@ -97,6 +124,7 @@ uint8_t i = 0;
 
 /************************** Function Declarations **************************/
 void loadTileData();
+void loadMap();
 void wait(int8_t loops);
 void drawCard(struct Card *c, int8_t x, int8_t y);
 void clearCard(int8_t x, int8_t y);
@@ -117,22 +145,21 @@ void clearHands();
 void goToNextHand();
 void drawHandCount();
 void clearHandCount();
+void showInstructions();
+void initalDeal();
 
 uint8_t playerTotal();
 uint8_t dealerTotal();
 /******************************************************************************/
 
-
 void main(void)
 {
+
+    //Loads the standard font tiles
+    printf(" ");
     loadTileData();
 
-    // this also loads the characters/numbers for us
-    printf("\n");
-    printf("\n\nA        Hit");
-    printf("\n\nB        Stay");
-    printf("\n\nStart    Split");
-    printf("\n\nSelect   Double Down");
+    showInstructions();
 
     //Use the user input to generate a seed #
     waitpad(0xFF);
@@ -147,9 +174,8 @@ void main(void)
             set_bkg_tiles(i, z, 1, 1, &blankTile);
         }
     }
-    SHOW_SPRITES;
-    SHOW_BKG;
 
+    loadMap();
 
     while(money > 0) {
         for (i = 0; i < 5; i++) {
@@ -174,7 +200,7 @@ void main(void)
 
         printMoney();
 
-        drawString("Place bet", RESULT_X, RESULT_Y);
+        drawString("PLACE BET", RESULT_X, RESULT_Y);
 
         while(betting == TRUE) {
             joydata = joypad();
@@ -187,6 +213,7 @@ void main(void)
                     betSize = money;
                 }
                 printMoney();
+                wait(4);          
             }
             if (joydata & J_DOWN) {
                 betSize--;
@@ -194,6 +221,7 @@ void main(void)
                     betSize = 1;
                 }
                 printMoney();
+                wait(4);          
             }
             if (joydata & J_LEFT) {
                 betSize -= 10;
@@ -201,6 +229,7 @@ void main(void)
                     betSize = 1;
                 }
                 printMoney();
+                wait(4);          
             }
             if (joydata & J_RIGHT) {
                 betSize += 10;
@@ -208,27 +237,17 @@ void main(void)
                     betSize = money;
                 }
                 printMoney();
+                wait(4);          
             }
 
-            wait(5);          
+            wait(1);          
         }
         clearResult();
 
         money -= betSize;
-        // inital deal
-        // HACK to get a specific card
-        //playerHand[0][0] = giveCard(8, 2, FALSE);
-        //playerCardsCount[0]++;
-        //playerHand[0][1] = giveCard(8, 1, FALSE);
-        //playerCardsCount[0]++;
-        dealToPlayer();
-        dealToPlayer();
 
-        dealToDealer(TRUE);
-        dealToDealer(FALSE);
+        initalDeal();
 
-        drawPlayersCards();
-        drawDealersCards();
         updateTotals(playerTotal(), dealerTotal());
         printMoney();
 
@@ -282,7 +301,7 @@ void main(void)
                 if (joydata & J_SELECT) {
                     // Make sure we have enough $$ and its 1st card
                     if(money - 1 > betSize && firstCard == TRUE) {
-                        drawString("Double down!", RESULT_X - 2, RESULT_Y);
+                        drawString("DOUBLE DOWN!", RESULT_X, RESULT_Y);
                         doubledDown = TRUE;
                         // Double the bet!
                         money -= betSize;
@@ -418,12 +437,39 @@ void main(void)
         waitpadup();
 
     }
-    drawString("U BROKE!", RESULT_X, RESULT_Y);
+    drawString("U BROKE NOOB!", RESULT_X, RESULT_Y);
 }
 
 /**************************************************************************/
 
 /************************** Game Functions *******************************/
+void initalDeal() {
+        // inital deal
+        // HACK to get a specific card
+        //playerHand[0][0] = giveCard(8, 2, FALSE);
+        //playerCardsCount[0]++;
+        //playerHand[0][1] = giveCard(8, 1, FALSE);
+        //playerCardsCount[0]++;
+
+        dealToPlayer();
+        drawPlayersCards();
+        updateTotals(playerTotal(), dealerTotal());
+        wait(50);
+
+        dealToDealer(TRUE);
+        drawDealersCards();
+        wait(50);
+
+        dealToPlayer();
+        drawPlayersCards();
+        updateTotals(playerTotal(), dealerTotal());
+        wait(50);
+
+        dealToDealer(FALSE);
+        drawDealersCards();
+        updateTotals(playerTotal(), dealerTotal());
+}
+
 void goToNextHand() {
 
     currentHand++;
@@ -536,30 +582,63 @@ uint8_t dealerTotal(){
 //Takes in a card pointer and X&Y
 void drawCard(struct Card *c, int8_t x, int8_t y) {
     if (c->faceDown == TRUE) {
-        char b1 = b2Tiles;
-        char b2 = b2Tiles + sizeof(char);
-        char b3 = b2Tiles + sizeof(char) * 2;
-        char b4 = b2Tiles + sizeof(char) * 3;
-        set_bkg_tiles(x, y, 1, 1, &b1);
+
+        // positions
+        char b0 = cardBacks;
+        char b1 = cardBacks + sizeof(char);
+        char b2 = cardBacks + sizeof(char) * 2;
+        char b3 = cardBacks + sizeof(char) * 3;
+        char b4 = cardBacks + sizeof(char) * 4;
+        char b5 = cardBacks + sizeof(char) * 5;
+
+        //set Palette
+        VBK_REG = 1;
+        set_bkg_tiles(x, y, 1, 1, &paletteBack1);
+        set_bkg_tiles(x + 1, y, 1, 1, &paletteBack1);
+        set_bkg_tiles(x, y + 1, 1, 1, &paletteBack1);
+        set_bkg_tiles(x + 1, y + 1, 1, 1, &paletteBack1);
+        set_bkg_tiles(x, y + 2, 1, 1, &paletteBack1);
+        set_bkg_tiles(x + 1, y + 2, 1, 1, &paletteBack1);
+
+        //set tiles
+        VBK_REG = 0;
+        set_bkg_tiles(x, y, 1, 1, &b0);
+        set_bkg_tiles(x + 1, y, 1, 1, &b1);
         set_bkg_tiles(x, y + 1, 1, 1, &b2);
-        set_bkg_tiles(x + 1, y, 1, 1, &b3);
-        set_bkg_tiles(x + 1, y + 1, 1, 1, &b4);
+        set_bkg_tiles(x + 1, y + 1, 1, 1, &b3);
+        set_bkg_tiles(x, y + 2, 1, 1, &b4);
+        set_bkg_tiles(x + 1, y + 2, 1, 1, &b5);
 
     } else { 
+        //set Palette
+        VBK_REG = 1;
+        set_bkg_tiles(x, y, 1, 1, &paletteFace1);
+        set_bkg_tiles(x + 1, y, 1, 1, &paletteFace1);
+        set_bkg_tiles(x, y + 1, 1, 1, &paletteFace1);
+        set_bkg_tiles(x + 1, y + 1, 1, 1, &paletteFace1);
+        set_bkg_tiles(x, y + 2, 1, 1, &paletteFace1);
+        set_bkg_tiles(x + 1, y + 2, 1, 1, &paletteFace1);
+
+        VBK_REG = 0;
+
         char v = valueTiles + (c->value - 1);
-        //Top left, value
+        // Value
         set_bkg_tiles(x, y, 1, 1, &v);
+        v += sizeof(char) * 13;
+        set_bkg_tiles(x + 1, y + 2, 1, 1, &v);
 
-        //Top right always blank
-        set_bkg_tiles(x + 1, y, 1, 1, &topRightTile);
+        // Blanks
+        v = cardBlankTiles;
+        set_bkg_tiles(x, y + 1, 1, 1, &v);
+        v += sizeof(char);
+        set_bkg_tiles(x + 1, y + 1, 1, 1, &v);
 
-        char s1 = spadesTile + ((c->suit - 1) * 2);
-        char s2 = spadesTile2 + ((c->suit - 1) * 2);
-
-        //Bottom 2 (Suit)
-        set_bkg_tiles(x, y + 1, 1, 1, &s1);
-        set_bkg_tiles(x + 1, y + 1, 1, 1, &s2);
-        }
+        // Suits
+        v = suitTiles + ((c->suit - 1) * 2);
+        set_bkg_tiles(x + 1, y, 1, 1, &v);
+        v = suitTiles + ((c->suit - 1) * 2) + sizeof(char);
+        set_bkg_tiles(x, y + 2, 1, 1, &v);
+    }
 }
 
 void clearCard(int8_t x, int8_t y) {
@@ -567,50 +646,54 @@ void clearCard(int8_t x, int8_t y) {
     set_bkg_tiles(x + 1, y, 1, 1, &blankTile);
     set_bkg_tiles(x, y + 1, 1, 1, &blankTile);
     set_bkg_tiles(x + 1, y + 1, 1, 1, &blankTile);
+    set_bkg_tiles(x, y + 2, 1, 1, &blankTile);
+    set_bkg_tiles(x + 1, y + 2, 1, 1, &blankTile);
 
 }
 
 void drawPlayersCards() {
-    uint8_t bigHand = 2;
-    if (playerCardsCount[currentHand] > 10) {
-        if (playerCardsCount[currentHand] == 11) {
+    uint8_t bigHand = 3;
+    if (playerCardsCount[currentHand] > 5) {
+        if (playerCardsCount[currentHand] == 6) {
             clearPlayerCards();
         }
-        bigHand = 1;
+        bigHand = 2;
     }
+
     uint8_t i;
     for (i = 0; i < playerCardsCount[currentHand]; i++) {
-        drawCard(playerHand[currentHand][i], i * bigHand, 13);
+        drawCard(playerHand[currentHand][i], PLAYER_HAND_X + (i*bigHand), PLAYER_HAND_Y);
     }
 }
+
 void clearPlayerCards() {
     uint8_t i;
-    for (i = 0; i < 10; i++) {
-        clearCard(i * 2, 13);
+    for (i = 0; i < 5; i++) {
+        clearCard(PLAYER_HAND_X + (i * 3), PLAYER_HAND_Y);
     }
 
 }
 
 void drawDealersCards() {
-    uint8_t bigHand = 2;
-    if (dealerCardsCount > 10) {
-        if (dealerCardsCount == 11) {
+    uint8_t bigHand = 3;
+    if (dealerCardsCount > 5) {
+        if (dealerCardsCount == 6) {
             clearDealersCards();
         }
-        bigHand = 1;
+        bigHand = 2;
     }
     uint8_t i;
     for (i = 0; i < dealerCardsCount; i++) {
-        drawCard(dealersHand[i], i * bigHand, 5);
+        drawCard(dealersHand[i], DEALER_HAND_X + (i*bigHand), DEALER_HAND_Y);
     }
 }
 void clearDealersCards() {
     uint8_t i;
-    for (i = 0; i < 10; i++) {
-        clearCard(i * 2, 5);
+    for (i = 0; i < 5; i++) {
+        clearCard(DEALER_HAND_X + (i * 3), DEALER_HAND_Y);
     }
-
 }
+
 //******************************* String drawing *********************************/
 
 void drawString(char *s, uint8_t x, uint8_t y){
@@ -628,91 +711,79 @@ void drawString(char *s, uint8_t x, uint8_t y){
 void drawHandCount() {
     // create split string to display
     char *splitString = (char*)malloc(16 * sizeof(char));
-    sprintf(splitString, "Hand: %d/%d", currentHand + 1, playerHandCount);
+    sprintf(splitString, "%d/%d", currentHand + 1, playerHandCount);
     drawString(splitString, HAND_COUNT_X, HAND_COUNT_Y);
     free(splitString);
 
 }
 void clearHandCount() {
     uint8_t i;
-    for(i = HAND_COUNT_X; i < HAND_COUNT_X + 14; i++){
-        set_bkg_tiles(i, HAND_COUNT_Y, 1, 1, &blankTile);
+    for(i = HAND_COUNT_X; i < HAND_COUNT_X + 4; i++){
+       // set_bkg_tiles(i, HAND_COUNT_Y, 1, 1, &blankTile);
     }
     
 }
 
-
 void clearTotals(){
-        set_bkg_tiles(PLAYER_HAND_VALUE_X - 2, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
-        set_bkg_tiles(PLAYER_HAND_VALUE_X - 1, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
         set_bkg_tiles(PLAYER_HAND_VALUE_X, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
         set_bkg_tiles(PLAYER_HAND_VALUE_X + 1, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
-        set_bkg_tiles(DEALER_HAND_VALUE_X - 2, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);
-        set_bkg_tiles(DEALER_HAND_VALUE_X - 1, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);
+
         set_bkg_tiles(DEALER_HAND_VALUE_X, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);
-        set_bkg_tiles(DEALER_HAND_VALUE_X + 1, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);  
+        set_bkg_tiles(DEALER_HAND_VALUE_X +1, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);
 }
 
 void updateTotals(uint8_t p, uint8_t d) {
 
-    //updating players total
-    if (p < 22) {
-        uint8_t ones = p % 10;
-        uint8_t tens = p / 10;
-        char o = numbersTile + ones;
-        char t = numbersTile + tens;
 
-        set_bkg_tiles(PLAYER_HAND_VALUE_X + 1, PLAYER_HAND_VALUE_Y, 1, 1, &o);
-        if (tens != 0) {
-            set_bkg_tiles(PLAYER_HAND_VALUE_X, PLAYER_HAND_VALUE_Y, 1, 1, &t);
-        } else {
-            set_bkg_tiles(PLAYER_HAND_VALUE_X, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
-        }
+    uint8_t ones = p % 10;
+    uint8_t tens = p / 10;
+    char o = numbersTile + ones;
+    char t = numbersTile + tens;
+
+    set_bkg_tiles(PLAYER_HAND_VALUE_X + 1, PLAYER_HAND_VALUE_Y, 1, 1, &o);
+    if (tens != 0) {
+        set_bkg_tiles(PLAYER_HAND_VALUE_X, PLAYER_HAND_VALUE_Y, 1, 1, &t);
     } else {
-        drawString("Bust  ", PLAYER_HAND_VALUE_X - 2, PLAYER_HAND_VALUE_Y);
+        set_bkg_tiles(PLAYER_HAND_VALUE_X, PLAYER_HAND_VALUE_Y, 1, 1, &blankTile);
     }
 
-    if (d < 22) {
-    
-        //updating dealers total
-        uint8_t ones = d % 10;
-        uint8_t tens = d / 10;
-        char o = numbersTile + ones;
-        char t = numbersTile + tens;
+    //updating dealers total
+    ones = d % 10;
+    tens = d / 10;
+    o = numbersTile + ones;
+    t = numbersTile + tens;
 
-        set_bkg_tiles(18, 2, 1, 1, &o);
-        if (tens != 0) {
-            set_bkg_tiles(17, 2, 1, 1, &t);
-        } else {
-            set_bkg_tiles(17, 2, 1, 1, &blankTile);
-        }
-
+    set_bkg_tiles(DEALER_HAND_VALUE_X + 1, DEALER_HAND_VALUE_Y, 1, 1, &o);
+    if (tens != 0) {
+        set_bkg_tiles(DEALER_HAND_VALUE_X, DEALER_HAND_VALUE_Y, 1, 1, &t);
     } else {
-        drawString("Bust  ", DEALER_HAND_VALUE_X -2 , DEALER_HAND_VALUE_Y);
+        set_bkg_tiles(DEALER_HAND_VALUE_X, DEALER_HAND_VALUE_Y, 1, 1, &blankTile);
     }
+
+   
 
 
 }
 
 void printResult(uint8_t result){
     if (result == 0){ // win
-        drawString("You win!", RESULT_X, RESULT_Y);
+        drawString("YOU WIN!", RESULT_X, RESULT_Y);
     }
     else if (result == 1){ //lose
-        drawString("You lose", RESULT_X, RESULT_Y);
+        drawString("YOU LOSE", RESULT_X, RESULT_Y);
     }
     else if (result == 2){ // push
-        drawString("Push", RESULT_X, RESULT_Y);
+        drawString("PUSH", RESULT_X, RESULT_Y);
     }
     else { //bj
-        drawString("Black Jack!", RESULT_X - 2, RESULT_Y);
+        drawString("BLACK JACK!", RESULT_X - 2, RESULT_Y);
     }
     
 }
 
 void clearResult() {
     uint8_t i;
-    for(i = RESULT_X - 4; i < RESULT_X + 15; i++){
+    for(i = RESULT_X; i < RESULT_X + 15; i++){
         set_bkg_tiles(i, RESULT_Y, 1, 1, &blankTile);
     }
     
@@ -722,14 +793,33 @@ void printMoney(){
 
     uint8_t l;
     char str[10];
-    sprintf(str, "$%d     ", money);
+    //gotta be a better way lol
+    if (money > 9999) {
+        sprintf(str, "$%d", money);
+    } else if (money < 10000 && money > 999) {
+        sprintf(str, "$%d ", money);
+    } else if (money < 1000 && money > 99) {
+        sprintf(str, "$%d  ", money);
+    } else if (money < 100 && money > 9) {
+        sprintf(str, "$%d   ", money);
+    } else {
+        sprintf(str, "$%d    ", money);   
+    }
+
     l = strlen(str);
     drawString(str, MONEY_X, MONEY_Y);
 
     char str2[10];
-    sprintf(str2, "%d    ", betSize);
+    if (betSize > 99) {
+        sprintf(str2, "$%d", betSize);
+    } else if (betSize < 100 && betSize > 9) {
+        sprintf(str2, "$%d ", betSize);
+    } else {
+        sprintf(str2, "$%d  ", betSize);
+    }
+
     l = strlen(str2);
-    drawString(str2, MONEY_X+ 1, MONEY_Y + 1);
+    drawString(str2, BET_X, BET_Y + 1);
 
 }
 
@@ -737,17 +827,59 @@ void clearMoney(){
     uint8_t i;
     for(i = MONEY_X; i < MONEY_X + 5; i++){
         set_bkg_tiles(i, MONEY_Y, 1, 1, &blankTile);
-        set_bkg_tiles(i - 4, MONEY_Y + 1, 1, 1, &blankTile);
+    }
+    for(i = BET_X; i < BET_Y + 3; i++){
+        set_bkg_tiles(i, BET_Y, 1, 1, &blankTile);
     }
     wait(1);
 }
 
+void showInstructions() {
+
+    drawString("A      HIT", 1, 5);
+    drawString("B      STAY", 1, 7);
+    drawString("START  SPLIT", 1, 9);
+    drawString("SELECT DOUBLE DOWN", 1 , 11);
+
+}
+
 void loadTileData() {
 
-    set_bkg_data(128u, SPRITE_TILES_COUNT, CardTiles);
+    //load 3 palettes
+    set_bkg_palette(0, 3, &bgPalettes[0]);
 
-    //load palettes
-    set_bkg_palette(0, 1, bgPalette);
+    //load into the 2nd chunk of VRAM
+    set_bkg_data(128u, CARD_TILES_COUNT, &neoBjCards[0]);
+    
+    //load space as black blanks tile
+    set_bkg_data(0u, 1, &neoBjCards[0]);
+    // Replace with our numbers
+    set_bkg_data(16u, FONT_NUMBERS_COUNT, &neoBjCards[FONT_NUMBERS_START * 16]);
+    // Replace with our capital letters
+    set_bkg_data(33u, FONT_LETTERS_COUNT, &neoBjCards[FONT_LETTERS_START * 16]);
+
+    // Replace some punctuation 
+    set_bkg_data(1u, 1, &neoBjCards[FONT_EXCALMATION * 16]);
+    set_bkg_data(15u, 1, &neoBjCards[FONT_SLASH * 16]);
+    set_bkg_data(31u, 1, &neoBjCards[FONT_QUESTION * 16]);
+    set_bkg_data(4u, 1, &neoBjCards[FONT_MONEY * 16]);
+
+    SHOW_BKG;
+    DISPLAY_ON;
+}
+
+void loadMap(){
+
+    //change bank
+    VBK_REG = 1;
+    //load the palette properties
+    set_bkg_tiles(0, 0, 20, 18, neoBjMapPLN1);
+
+    VBK_REG = 0;
+    set_bkg_tiles(0, 0, 20, 18, neoBjMapPLN0);
+
+    //write BET (BG MAP messed up)
+    drawString("BET", BET_X, BET_Y - 1);
 }
 /******************************************************************************/
 
