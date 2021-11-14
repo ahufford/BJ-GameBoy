@@ -58,7 +58,7 @@
 
 /* Gameboy Color palette 1 */
 #define neoBjCardsCGBPal1c0 32767
-#define neoBjCardsCGBPal1c1 31935
+#define neoBjCardsCGBPal1c1 26425
 #define neoBjCardsCGBPal1c2 7138
 #define neoBjCardsCGBPal1c3 0
 
