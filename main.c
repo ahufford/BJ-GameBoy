@@ -108,9 +108,10 @@ int8_t x = 0;
 uint8_t joydata = 0;
 
 BOOLEAN bust[5] = {0, 0, 0, 0, 0};
+BOOLEAN blackJack[5] = {0, 0, 0, 0, 0};
+
 BOOLEAN stay = FALSE;
 BOOLEAN dealerBust = FALSE;
-BOOLEAN blackJack = FALSE;
 BOOLEAN firstCard = TRUE;
 BOOLEAN betting = TRUE;
 BOOLEAN doubledDown = FALSE;
@@ -180,10 +181,10 @@ void main(void)
     while(money > 0) {
         for (i = 0; i < 5; i++) {
             bust[i] = FALSE;
+            blackJack[i] = FALSE;
         }
         stay = FALSE;
         dealerBust = FALSE;
-        blackJack = FALSE;
         splitCount = 0;
         doubledDown = FALSE;
 
@@ -225,7 +226,7 @@ void main(void)
             }
             if (joydata & J_LEFT) {
                 betSize -= 10;
-                if (betSize < 0) {
+                if (betSize < 1) {
                     betSize = 1;
                 }
                 printMoney();
@@ -252,12 +253,12 @@ void main(void)
         printMoney();
 
         if(playerTotal() == 21){
-            blackJack = TRUE;
+            blackJack[currentHand] = TRUE;
         }
         waitpadup();
         
         firstCard = TRUE;
-        if (blackJack == FALSE){
+        if (blackJack[currentHand] == FALSE){
             // Players Turn
             while (stay == FALSE) {
                 //Get Joypad input
@@ -329,6 +330,7 @@ void main(void)
 
                     }
                 }
+                //******************* SPLIT ****************//
                 if (joydata & J_START) {
                     if (money - 1 > betSize && playerHand[currentHand][0]->value == playerHand[currentHand][1]->value && firstCard == TRUE) {
                         splitCount++;
@@ -345,10 +347,20 @@ void main(void)
                         drawPlayersCards();
                         updateTotals(playerTotal(), dealerTotal());
                         wait(50);
+
                         dealToPlayer();
                         clearTotals();
                         updateTotals(playerTotal(), dealerTotal());
                         drawPlayersCards();
+                        
+                        if(playerTotal() == 21){
+                            drawString("BLACK JACK!", RESULT_X, RESULT_Y);
+                            blackJack[currentHand] = TRUE;
+                            wait(100);
+                            clearResult();
+                            goToNextHand();
+                        }
+
                     }
                 }
 
@@ -400,12 +412,12 @@ void main(void)
 
             if (bust[currentHand] == TRUE){ // LOSS
                 printResult(1);
+            } else if (blackJack[currentHand] == TRUE) {
+                money += betSize * 3;
+                printResult(3);
             } else if(dealerBust == TRUE) { // WIN
                 money += betSize * 2;
                 printResult(0);
-            } else if (blackJack == TRUE) {
-                money += betSize * 3;
-                printResult(3);
             } else if (dealerTotal() == playerTotal()) { //TIE
                 money += betSize;
                 printResult(2);
@@ -446,10 +458,10 @@ void main(void)
 void initalDeal() {
         // inital deal
         // HACK to get a specific card
-        //playerHand[0][0] = giveCard(8, 2, FALSE);
-        //playerCardsCount[0]++;
-        //playerHand[0][1] = giveCard(8, 1, FALSE);
-        //playerCardsCount[0]++;
+        // playerHand[0][0] = giveCard(1, 2, FALSE);
+        // playerCardsCount[0]++;
+        // playerHand[0][1] = giveCard(1, 1, FALSE);
+        // playerCardsCount[0]++;
 
         dealToPlayer();
         drawPlayersCards();
@@ -488,6 +500,14 @@ void goToNextHand() {
     updateTotals(playerTotal(), dealerTotal());
     // Reset so we can double down / split again
     firstCard = TRUE;
+    if(playerTotal() == 21){
+        blackJack[currentHand] = TRUE;
+        if (playerHandCount != currentHand + 1) {
+            goToNextHand();
+        } else {
+            stay = TRUE;
+        }
+    }
 }
 
 
@@ -668,8 +688,8 @@ void drawPlayersCards() {
 
 void clearPlayerCards() {
     uint8_t i;
-    for (i = 0; i < 5; i++) {
-        clearCard(PLAYER_HAND_X + (i * 3), PLAYER_HAND_Y);
+    for (i = 0; i < 13; i++) {
+        clearCard(PLAYER_HAND_X + i, PLAYER_HAND_Y);
     }
 
 }
@@ -689,8 +709,8 @@ void drawDealersCards() {
 }
 void clearDealersCards() {
     uint8_t i;
-    for (i = 0; i < 5; i++) {
-        clearCard(DEALER_HAND_X + (i * 3), DEALER_HAND_Y);
+    for (i = 0; i < 13; i++) {
+        clearCard(DEALER_HAND_X + i, DEALER_HAND_Y);
     }
 }
 
@@ -719,7 +739,7 @@ void drawHandCount() {
 void clearHandCount() {
     uint8_t i;
     for(i = HAND_COUNT_X; i < HAND_COUNT_X + 4; i++){
-       // set_bkg_tiles(i, HAND_COUNT_Y, 1, 1, &blankTile);
+        set_bkg_tiles(i, HAND_COUNT_Y, 1, 1, &blankTile);
     }
     
 }
@@ -776,7 +796,7 @@ void printResult(uint8_t result){
         drawString("PUSH", RESULT_X, RESULT_Y);
     }
     else { //bj
-        drawString("BLACK JACK!", RESULT_X - 2, RESULT_Y);
+        drawString("BLACK JACK!", RESULT_X, RESULT_Y);
     }
     
 }
