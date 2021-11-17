@@ -10,6 +10,7 @@
 #include "assets/neoBjMap.h"
 
 #include "card.c"
+#include "beg.h"
 
 /************************** Tile defs **************************/
 
@@ -124,9 +125,10 @@ uint8_t i = 0;
 
 
 /************************** Function Declarations **************************/
+static void wait(int8_t loops);
+
 void loadTileData();
 void loadMap();
-void wait(int8_t loops);
 void drawCard(struct Card *c, int8_t x, int8_t y);
 void clearCard(int8_t x, int8_t y);
 void dealToPlayer();
@@ -155,18 +157,19 @@ uint8_t dealerTotal();
 
 void main(void)
 {
-
     //Loads the standard font tiles
     printf(" ");
-    loadTileData();
+    //loadTileData();
 
-    showInstructions();
+    //showInstructions();
 
     //Use the user input to generate a seed #
     waitpad(0xFF);
     uint16_t seed = LY_REG;
     seed |= (uint16_t)DIV_REG << 8;
-    initrand(seed);
+    //initrand(seed);
+
+    beg(seed);
 
     // clear the bg
     uint8_t z;
@@ -903,7 +906,7 @@ void loadMap(){
 }
 /******************************************************************************/
 
-void wait(int8_t loops) {
+static void wait(int8_t loops) {
     int8_t i;
     for(i = 0; i < loops; i++){
         wait_vbl_done();
