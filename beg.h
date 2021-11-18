@@ -7,4 +7,4 @@
 #include <stdlib.h>
 #include <rand.h>
 
-uint16_t beg(uint16_t s);
+uint16_t beg();

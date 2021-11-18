@@ -107,6 +107,7 @@ int16_t betSize = 5;
 
 int8_t x = 0;
 uint8_t joydata = 0;
+uint16_t seed = 0;
 
 BOOLEAN bust[5] = {0, 0, 0, 0, 0};
 BOOLEAN blackJack[5] = {0, 0, 0, 0, 0};
@@ -159,17 +160,15 @@ void main(void)
 {
     //Loads the standard font tiles
     printf(" ");
-    //loadTileData();
+    loadTileData();
 
-    //showInstructions();
+    showInstructions();
 
     //Use the user input to generate a seed #
     waitpad(0xFF);
-    uint16_t seed = LY_REG;
+    seed = LY_REG;
     seed |= (uint16_t)DIV_REG << 8;
-    //initrand(seed);
-
-    beg(seed);
+    initrand(seed);
 
     // clear the bg
     uint8_t z;
@@ -181,7 +180,7 @@ void main(void)
 
     loadMap();
 
-    while(money > 0) {
+    while(1) {
         for (i = 0; i < 5; i++) {
             bust[i] = FALSE;
             blackJack[i] = FALSE;
@@ -249,11 +248,11 @@ void main(void)
         clearResult();
 
         money -= betSize;
+        printMoney();
 
         initalDeal();
 
         updateTotals(playerTotal(), dealerTotal());
-        printMoney();
 
         if(playerTotal() == 21){
             blackJack[currentHand] = TRUE;
@@ -451,8 +450,16 @@ void main(void)
         waitpad(J_A);
         waitpadup();
 
+        if(money == 0){
+            drawString("U BROKE NOOB!", RESULT_X, RESULT_Y);
+            waitpad(J_A);
+            money = beg();
+            move_bkg(0, 0);
+            betSize = 5;
+            loadMap();
+        }
     }
-    drawString("U BROKE NOOB!", RESULT_X, RESULT_Y);
+
 }
 
 /**************************************************************************/

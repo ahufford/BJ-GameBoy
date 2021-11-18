@@ -12,6 +12,7 @@ struct Coin
 
 
 /************************** Tile defs **************************/
+static char blankTile = 0x7F;
 
 const UWORD coinPalette[] = {
 
@@ -20,6 +21,7 @@ const UWORD coinPalette[] = {
     coinCGBPal0c2, 
     coinCGBPal0c3,
 };
+
 const UWORD barrelPalette[] = {
 
     TrashBarrelCGBPal0c0,
@@ -31,7 +33,7 @@ const UWORD barrelPalette[] = {
 const UWORD coinBgPalette[] = {
 
     0x7FFF, 
-    0x0000, 
+    0x7FFF, 
     0x0000, 
     0x0000,
 };
@@ -45,6 +47,7 @@ uint8_t playerY = 144;
 uint8_t BARREL_WIDTH = 8;
 uint16_t scraps = 0;
 uint8_t input = 0;
+uint16_t time = 0;
 
 /************************** Function Declarations **************************/
 static void wait(int8_t loops);
@@ -52,22 +55,36 @@ static void loadTileData();
 static void setUpGame();
 static void moveCoins();
 static void checkCollision();
+static void printTime();
 static void printNum(uint8_t num, uint8_t x, uint8_t y);
 static void drawString(char *s, uint8_t x, uint8_t y);
 
+unsigned char standardPalette = 0x00;
 
+//**************************** uncomment to just test this file
+// void main(void) {
+//     //Use the user input to generate a seed #
+//     printf(" ");
+//     waitpad(0xFF);
+//     uint16_t seed = LY_REG;
+//     seed |= (uint16_t)DIV_REG << 8;
 
+//     beg(seed);
 
+// }
 
 /******************************* Game Functions ***********************************/
 // Start of begging minigame
-uint16_t beg(uint16_t s) {
-    initrand(s);
+uint16_t beg() {
 
     loadTileData();
+
     setUpGame();
 
-    while (1)
+    printTime();
+    printNum(scraps, 1, 17);
+
+    while (time > 0)
     {
         input = joypad();
 
@@ -94,21 +111,56 @@ uint16_t beg(uint16_t s) {
 
         wait(1);
         cycle++;
+        if(cycle % 50 == 0){
+            time--;
+            printTime();
+        }
     }
 
-    return 0;
+    for(loop = 0; loop < COIN_COUNT; loop++) {
+        move_sprite(loop + 1, 0, 0);
+        free(coins[loop]);    
+    }
+
+    VBK_REG = 1;
+    uint8_t z;
+    for (z = 0; z < 17; z++) {
+        for (loop = 0; loop < 20; loop++) {
+            set_bkg_tiles(loop, z, 1, 1, &standardPalette);
+
+        }
+    }
+
+    VBK_REG = 0;
+    for (z = 0; z < 17; z++) {
+        for (loop = 0; loop < 20; loop++) {
+            set_bkg_tiles(loop, z, 1, 1, &blankTile);
+
+        }
+    }
+
+    drawString("BACK TO", 6, 7);
+    drawString("THE TABLES", 4, 8);
+    waitpad(J_A);
+    HIDE_SPRITES;
+    waitpadup();
+    return scraps;
 }
 
 static void checkCollision() {
+
      for(loop = 0; loop < COIN_COUNT; loop++){
-        if (coins[loop]->onScreen == TRUE && coins[loop]->y == 142){
-            if ((coins[loop]->x > playerX && coins[loop]->x < playerX + BARREL_WIDTH) 
-            ||  (playerX > coins[loop]->x && playerX < coins[loop]->x + BARREL_WIDTH) ){
-                coins[loop]->onScreen = FALSE;
-                coins[loop]->x = (((uint8_t) rand()) % (uint8_t) 160);
-                move_sprite(loop + 1, 0,0);
-                scraps++;
-                printNum(scraps, 1, 17);
+        if (coins[loop]->onScreen == TRUE) {
+
+            if (coins[loop]->y + 8u > playerY && coins[loop]->y + 8u < playerY + 8u){
+                if ((coins[loop]->x > playerX && coins[loop]->x < playerX + BARREL_WIDTH) 
+                ||  (playerX > coins[loop]->x && playerX < coins[loop]->x + BARREL_WIDTH) ){
+                    coins[loop]->onScreen = FALSE;
+                    coins[loop]->x = (((uint8_t) rand()) % (uint8_t) 160);
+                    move_sprite(loop + 1, 0,0);
+                    scraps++;
+                    printNum(scraps, 1, 17);
+                }
             }
         }
      }
@@ -117,7 +169,7 @@ static void checkCollision() {
 static void moveCoins() {
     for(loop = 0; loop < COIN_COUNT; loop++){
         if(coins[loop]->onScreen == TRUE) {
-            coins[loop]->y += 1;
+            coins[loop]->y += 2;
             if (coins[loop]->y % 10 == 0){
                 if (coins[loop]->state == 6){
                     coins[loop]->state = 1;
@@ -139,6 +191,14 @@ static void moveCoins() {
 }
 
 static void setUpGame(){
+    loop = 0;
+    cycle = 0;
+    playerX = 50;
+    playerY = 144;
+    BARREL_WIDTH = 8;
+    scraps = 0;
+    input = 0;
+    time = 120;
 
     for(loop = 0; loop < COIN_COUNT; loop++) {
         // coin data
@@ -151,7 +211,7 @@ static void setUpGame(){
         coins[loop]->onScreen = FALSE;
 
         // coin sprites
-        set_sprite_tile(loop + 1, 0);
+        set_sprite_tile(loop + 1, 1);
 
     }
 }
@@ -159,6 +219,7 @@ static void setUpGame(){
 /********************************** Drawing Functions *****************************/
 
 static void loadTileData() {
+    printf(" ");
     set_sprite_data(0, 1, TrashBarrel);
     set_sprite_data(1, 6, coin);
 
@@ -175,11 +236,27 @@ static void loadTileData() {
 
     move_sprite(0, 50, 144);
 
-    set_bkg_palette(0, 1, coinBgPalette);
+    set_bkg_palette(3, 1, coinBgPalette);
+    //clear bg
+    VBK_REG = 1;
+    uint8_t z;
+    for (z = 0; z < 17; z++) {
+        for (loop = 0; loop < 20; loop++) {
+            set_bkg_tiles(loop, z, 1, 1, coinBgPalette);
+        }
+    }
+    VBK_REG = 0;
 
+    drawString("$", 0,17);
+    drawString("TIME", 12 ,17);
+    
     SHOW_SPRITES;
     SHOW_BKG;
     DISPLAY_ON;
+}
+
+static void printTime() {
+    printNum(time,17,17);
 }
 
 static void drawString(char *s, uint8_t x, uint8_t y){
@@ -197,7 +274,13 @@ static void drawString(char *s, uint8_t x, uint8_t y){
 static void printNum(uint8_t num, uint8_t x, uint8_t y) {
     // create split string to display
     char *splitString = (char*)malloc(16 * sizeof(char));
-    sprintf(splitString, "%d", num);
+    if (num > 99){
+        sprintf(splitString, "%d", num);
+    } else if (num < 100 && num > 9) {
+        sprintf(splitString, "%d ", num);
+    } else {
+        sprintf(splitString, "%d  ", num);
+    }
     drawString(splitString, x, y);
     free(splitString);
 
