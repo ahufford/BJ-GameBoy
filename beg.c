@@ -13,6 +13,7 @@ struct Coin
 
 /************************** Tile defs **************************/
 static char blankTile = 0x7F;
+static char blackTile = 0x00;
 
 const UWORD coinPalette[] = {
 
@@ -31,11 +32,10 @@ const UWORD barrelPalette[] = {
 };
 
 const UWORD coinBgPalette[] = {
-
-    0x7FFF, 
-    0x7FFF, 
-    0x0000, 
-    0x0000,
+32767,
+31935,
+7138,
+0
 };
 
 /************************** Game Controller Members **************************/
@@ -58,6 +58,7 @@ static void checkCollision();
 static void printTime();
 static void printNum(uint8_t num, uint8_t x, uint8_t y);
 static void drawString(char *s, uint8_t x, uint8_t y);
+static void endBeg();
 
 unsigned char standardPalette = 0x00;
 
@@ -122,28 +123,8 @@ uint16_t beg() {
         free(coins[loop]);    
     }
 
-    VBK_REG = 1;
-    uint8_t z;
-    for (z = 0; z < 17; z++) {
-        for (loop = 0; loop < 20; loop++) {
-            set_bkg_tiles(loop, z, 1, 1, &standardPalette);
+    endBeg();
 
-        }
-    }
-
-    VBK_REG = 0;
-    for (z = 0; z < 17; z++) {
-        for (loop = 0; loop < 20; loop++) {
-            set_bkg_tiles(loop, z, 1, 1, &blankTile);
-
-        }
-    }
-
-    drawString("BACK TO", 6, 7);
-    drawString("THE TABLES", 4, 8);
-    waitpad(J_A);
-    HIDE_SPRITES;
-    waitpadup();
     return scraps;
 }
 
@@ -153,7 +134,7 @@ static void checkCollision() {
         if (coins[loop]->onScreen == TRUE) {
 
             if (coins[loop]->y + 8u > playerY && coins[loop]->y + 8u < playerY + 8u){
-                if ((coins[loop]->x > playerX && coins[loop]->x < playerX + BARREL_WIDTH) 
+                if ((coins[loop]->x >= playerX && coins[loop]->x < playerX + BARREL_WIDTH) 
                 ||  (playerX > coins[loop]->x && playerX < coins[loop]->x + BARREL_WIDTH) ){
                     coins[loop]->onScreen = FALSE;
                     coins[loop]->x = (((uint8_t) rand()) % (uint8_t) 160);
@@ -185,7 +166,6 @@ static void moveCoins() {
             coins[loop]->onScreen = FALSE;
             // This gives way better distribution if we pick a random when its done
             coins[loop]->x = (((uint8_t) rand()) % (uint8_t) 160);
-
         }
     }
 }
@@ -214,6 +194,40 @@ static void setUpGame(){
         set_sprite_tile(loop + 1, 1);
 
     }
+}
+
+static void endBeg() {
+    
+    VBK_REG = 1;
+    uint8_t z;
+    for (z = 0; z < 17; z++) {
+        for (loop = 0; loop < 20; loop++) {
+            set_bkg_tiles(loop, z, 1, 1, &standardPalette);
+
+        }
+    }
+
+    VBK_REG = 0;
+
+    for (z = 0; z < 17; z++) {
+        for (loop = 0; loop < 20; loop++) {
+            set_bkg_tiles(loop, z, 1, 1, &blackTile);
+
+        }
+    }
+    // black out the bg
+    // uint8_t i;
+    // for (z = 0; z < 17; z++) {
+    //     for (i = 0; i < 20; i++) {
+    //         set_bkg_tiles(i, z, 1, 1, &blackTile);
+    //     }
+    // }
+
+    drawString("BACK TO", 6, 7);
+    drawString("THE TABLES", 4, 8);
+    waitpad(J_A);
+    HIDE_SPRITES;
+    waitpadup();
 }
 
 /********************************** Drawing Functions *****************************/
@@ -245,7 +259,14 @@ static void loadTileData() {
             set_bkg_tiles(loop, z, 1, 1, coinBgPalette);
         }
     }
+    for (loop = 6; loop < 14; loop++) {
+        set_bkg_tiles(loop, 17, 1, 1, &standardPalette);
+    }
+
     VBK_REG = 0;
+    for (loop = 6; loop < 14; loop++) {
+        set_bkg_tiles(loop, 17, 1, 1, &blackTile);
+    }
 
     drawString("$", 0,17);
     drawString("TIME", 12 ,17);
