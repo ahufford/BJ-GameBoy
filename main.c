@@ -557,25 +557,22 @@ void dealToDealer(BOOLEAN faceDown){
 
 uint8_t playerTotal(){
     uint8_t total = 0;
-    BOOLEAN hasAce = FALSE;
+    uint8_t aces = 0;
     uint8_t i;
-    for (i = 0; i < playerCardsCount[currentHand]; i++){
-        if(playerHand[currentHand][i]->value == 1){
-            hasAce = TRUE;
-        }
-    }
     for (i = 0; i < playerCardsCount[currentHand]; i++){
         uint8_t v = playerHand[currentHand][i]->value;
         if (v > 10) {
             v = 10;
         }
-        if(v == 1 && total + 11 < 22){
+        if(v == 1){
             v = 11;
+            aces++;
         }
         total += v;
     }
-    if (hasAce == TRUE && total > 21){
+    while(aces > 0 && total > 21){
         total -= 10;
+        aces--;
     }
     return total;
 }

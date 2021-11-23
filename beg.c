@@ -178,7 +178,7 @@ static void setUpGame(){
     BARREL_WIDTH = 8;
     scraps = 0;
     input = 0;
-    time = 120;
+    time = 100;
 
     for(loop = 0; loop < COIN_COUNT; loop++) {
         // coin data

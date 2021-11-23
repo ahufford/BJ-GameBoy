@@ -1,3 +1,6 @@
+del BJ.gb
+
+
 C:\GBDEV\gbdk\bin\lcc -Wa-l -Wl-m -Wl-j -c -o tiles.o assets/neoBjTiles.c 
 C:\GBDEV\gbdk\bin\lcc -Wa-l -Wl-m -Wl-j -c -o map.o assets/neoBjMap.c 
 C:\GBDEV\gbdk\bin\lcc -Wa-l -Wl-m -Wl-j -c -o coin.o assets/coinTiles.c 
